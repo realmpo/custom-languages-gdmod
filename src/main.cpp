@@ -25,8 +25,8 @@ namespace LanguageEngine {
                     auto data = matjson::parse(file);
                     LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
-                    meta.englishName = data["lang-name-en"].asString().value_or("Unknown");
-                    meta.localName = data["lang-name-local"].asString().value_or("Unknown");
+                    meta.englishName = data["lang-name-en"].as<std::string>().unwrap_or("Unknown");
+										meta.localName = data["lang-name-local"].as<std::string>().unwrap_or("Unknown");
                     meta.twoLetterId = entry.path().stem().string();
                     list.push_back(meta);
                 } catch(...) {}
@@ -219,4 +219,18 @@ std::string getCustomTranslation(const std::string& key) {
     try {
         for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
             if (entry.path().extension() == ".json") {
-jsonPath = entry.path();break;}}if (!ghc::filesystem::exists(jsonPath)) {return key;}std::ifstream file(jsonPath);matjson::Value data = matjson::parse(file);if (data.contains("keys") && data["keys"].contains(key)) {return data["keys"][key].asString().value_or("String Error");}} catch (...) {}return key;}class $modify(MyCreatorLayer, CreatorLayer) {bool init() {if (!CreatorLayer::init()) return false;auto menu = this->getChildByID("creator-buttons-menu");if (!menu) return true;auto versusBtn = menu->getChildByID("versus-button");auto buttonContainer = cocos2d::CCNode::create();buttonContainer->setContentSize({ 50.f, 60.f });buttonContainer->setAnchorPoint({ 0.5f, 0.5f });auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");if (!iconSprite) {iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");}iconSprite->setScale(0.0878925f);iconSprite->setPosition({ 25.f, 35.f });buttonContainer->addChild(iconSprite);auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "goldFont.fnt");textLabel->setPosition({ 25.f, 5.f });textLabel->setScale(0.42f);buttonContainer->addChild(textLabel);auto langButton = CCMenuItemSpriteExtra::create(buttonContainer, this, menu_selector(MyCreatorLayer::onLanguageMenuClick));langButton->setID("mpo-languages-editor-button");if (versusBtn) {int versusIndex = menu->getChildren()->indexOfObject(versusBtn);menu->addChild(langButton);menu->reorderChild(langButton, versusIndex + 1);} else {menu->addChild(langButton);}menu->updateLayout();if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-daily-level-button").c_str());}}if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-gauntlet-button").c_str());}}return true;}void onLanguageMenuClick(cocos2d::CCObject* sender) {LanguageManagerPopup::create()->show();}};
+                jsonPath = entry.path();
+                break;
+            }
+        }
+        if (!ghc::filesystem::exists(jsonPath)) {
+            return key;
+        }
+        std::ifstream file(jsonPath);
+        matjson::Value data = matjson::parse(file);
+        if (data.contains("keys") && data["keys"].contains(key)) {
+            return data["keys"][key].as<std::string>().unwrap_or("String Error");
+        }
+    } catch (...) {}
+    return key;
+}
