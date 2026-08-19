@@ -8,7 +8,7 @@
 	},
 	"id": "mpo.custom-languages",
 	"name": "Custom Languages",
-	"version": "1.0.0-alpha-1",
+	"version": "0.1.0",
 	"developer": "Meower-Pro",
 	"description": "Add your own languages to Geometry Dash!",
 	"dependencies": {
