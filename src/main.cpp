@@ -23,11 +23,17 @@ namespace LanguageEngine {
                 try {
                     std::ifstream file(entry.path());
                     auto data = matjson::parse(file);
-                    LanguageMetadata meta;
+                                        LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
-                    meta.englishName = data["lang-name-en"].as<std::string>().unwrap_or("Unknown");
-										meta.localName = data["lang-name-local"].as<std::string>().unwrap_or("Unknown");
+                    
+                    auto engVal = data["lang-name-en"];
+                    meta.englishName = engVal.isString() ? engVal.asString() : "Unknown";
+                    
+                    auto locVal = data["lang-name-local"];
+                    meta.localName = locVal.isString() ? locVal.asString() : "Unknown";
+                    
                     meta.twoLetterId = entry.path().stem().string();
+
                     list.push_back(meta);
                 } catch(...) {}
             }
@@ -229,8 +235,12 @@ std::string getCustomTranslation(const std::string& key) {
         std::ifstream file(jsonPath);
         matjson::Value data = matjson::parse(file);
         if (data.contains("keys") && data["keys"].contains(key)) {
-            return data["keys"][key].as<std::string>().unwrap_or("String Error");
+          auto val = data["keys"][key];
+          if (val.isString()) {
+            return val.asString();
+          }
         }
+
     } catch (...) {}
     return key;
 }
