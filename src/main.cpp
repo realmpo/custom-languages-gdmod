@@ -293,10 +293,7 @@ for (size_t i = 0; i < m_cachedLanguages.size(); ++i)
 	}
 	CC_SAFE_DELETE(ret);return nullptr;}};// ==========================================// CORE INTERACTION HOOK// ==========================================
 // ==========================================
-// CORE INTERACTION HOOK - UPDATED POSITION
-// ==========================================
-// ==========================================
-// CORE INTERACTION HOOK - COMPLETE BLOCK
+// CORE INTERACTION HOOK - ENGINE SAFE BLOCK
 // ==========================================
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
@@ -305,7 +302,7 @@ class $modify(MyCreatorLayer, CreatorLayer) {
 
         // 2. Locate the main grid button container layout
         auto menu = this->getChildByID("creator-buttons-menu");
-        if (!menu) return true; // Safety check if the menu fails to load
+        if (!menu) return true; // Safety check
 
         // 3. Find the Versus button to use as our layout reference point
         auto versusBtn = menu->getChildByID("versus-button");
@@ -318,19 +315,17 @@ class $modify(MyCreatorLayer, CreatorLayer) {
         // 5. Load your high-resolution 128x128 icon artwork
         auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");
         if (!iconSprite) {
-            // Safe fallback to a built-in game asset frame if the image is missing
             iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
         }
         
-        // Scale your 128x128 asset down to match the native 45-pixel game button thickness
         iconSprite->setScale(0.0878925f); 
         iconSprite->setPosition({ 25.f, 35.f }); // Centers the icon in the upper half of the tile
         buttonContainer->addChild(iconSprite);
 
         // 6. Generate the bottom text label in the official gold menu font
-        auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "bigFont.fnt");
-        textLabel->setPosition({ 25.f, 5.f }); // Aligns it along the bottom edge of the tile slot
-        textLabel->setScale(0.42f); // Scales down text font to prevent overlapping neighbors
+        auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "goldFont.fnt");
+        textLabel->setPosition({ 25.f, 5.f }); 
+        textLabel->setScale(0.42f); 
         buttonContainer->addChild(textLabel);
 
         // 7. Wrap the composite layout container into an interactive, bouncy button
@@ -343,29 +338,34 @@ class $modify(MyCreatorLayer, CreatorLayer) {
 
         // 8. Insert our new button dynamically into the layout array safely
         if (versusBtn) {
-            // Find where the Versus button sits in the list layout
             int versusIndex = menu->getChildren()->indexOfObject(versusBtn);
-            
-            // Add the child to the menu normally first
             menu->addChild(langButton);
-            
-            // Reorder its position index to sit immediately right of the Versus button
             menu->reorderChild(langButton, versusIndex + 1);
         } else {
-            // Fallback: append normally if the Versus button is missing or locked
             menu->addChild(langButton);
         }
-
 
         // 9. Force the grid to recalculate its spacing metrics pixel-perfectly
         menu->updateLayout();
 
+        // 10. DYNAMICALLY APPLY LANGUAGE Overrides to the Daily/Gauntlet buttons if files exist
+        if (auto dailyBtn = menu->getChildByID("daily-level-button")) {
+            // Safe engine-approved cast to find the text label item inside the button
+            if (auto label = typeinfo_cast<cocos2d::CCLabelBMFont*>(dailyBtn->getChildByID("label"))) {
+                label->setString(getCustomTranslation("online-daily-level-button").c_str());
+            }
+        }
+
+        if (auto gauntletBtn = menu->getChildByID("gauntlet-button")) {
+            if (auto label = typeinfo_cast<cocos2d::CCLabelBMFont*>(gauntletBtn->getChildByID("label"))) {
+                label->setString(getCustomTranslation("online-gauntlet-button").c_str());
+            }
+        }
+
         return true;
     }
 
-    // This function executes when your new stacked menu button is clicked!
     void onLanguageMenuClick(cocos2d::CCObject* sender) {
-        // Instantiate and display your multi-page language editing engine window
         LanguageManagerPopup::create()->show();
     }
 };
