@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 
+std::string getCustomTranslation(const std::string& key);
 using namespace geode::prelude;
 
 // Forward declarations of UI classes
