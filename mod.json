@@ -1,0 +1,17 @@
+{
+	"geode": "5.9.0",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"id": "mpo.custom-languages",
+	"name": "Custom Languages",
+	"version": "1.0.0-alpha-1",
+	"developer": "Meower-Pro",
+	"description": "Add your own languages to Geometry Dash!",
+	"dependencies": {
+		"geode.node-ids": ">=v1.23.3"
+	}
+}
