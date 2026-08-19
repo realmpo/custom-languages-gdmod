@@ -293,7 +293,7 @@ for (size_t i = 0; i < m_cachedLanguages.size(); ++i)
 	}
 	CC_SAFE_DELETE(ret);return nullptr;}};// ==========================================// CORE INTERACTION HOOK// ==========================================
 // ==========================================
-// CORE INTERACTION HOOK - UPDATED SCALE & ICON
+// CORE INTERACTION HOOK - STREAMLINED FIX
 // ==========================================
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
@@ -315,11 +315,9 @@ class $modify(MyCreatorLayer, CreatorLayer) {
         // 5. Load your high-resolution 512x512 logo-transparent.png artwork
         auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");
         if (!iconSprite) {
-            // Safe fallback to a built-in game frame asset if the image is missing
             iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
         }
         
-        // Scale your 512x512 asset down to match the native 45-pixel game button thickness
         iconSprite->setScale(0.0878925f); 
         iconSprite->setPosition({ 25.f, 35.f }); // Centers the icon in the upper half of the tile
         buttonContainer->addChild(iconSprite);
@@ -350,24 +348,16 @@ class $modify(MyCreatorLayer, CreatorLayer) {
         // 9. Force the grid to recalculate its spacing metrics pixel-perfectly
         menu->updateLayout();
 
-        // 10. Dynamically apply language overrides by looping through child nodes safely
-        if (auto dailyBtn = menu->getChildByID("daily-level-button")) {
-            if (auto sprite = dailyBtn->getChildren()) {
-                for (int i = 0; i < sprite->count(); ++i) {
-                    if (auto txt = typeinfo_cast<cocos2d::CCLabelBMFont*>(sprite->objectAtIndex(i))) {
-                        txt->setString(getCustomTranslation("online-daily-level-button").c_str());
-                    }
-                }
+        // 10. DYNAMICALLY APPLY LANGUAGE OVERRIDES SAFELY USING GEODE IDS
+        if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {
+            if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {
+                label->setString(getCustomTranslation("online-daily-level-button").c_str());
             }
         }
 
-        if (auto gauntletBtn = menu->getChildByID("gauntlet-button")) {
-            if (auto sprite = gauntletBtn->getChildren()) {
-                for (int i = 0; i < sprite->count(); ++i) {
-                    if (auto txt = typeinfo_cast<cocos2d::CCLabelBMFont*>(sprite->objectAtIndex(i))) {
-                        txt->setString(getCustomTranslation("online-gauntlet-button").c_str());
-                    }
-                }
+        if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {
+            if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {
+                label->setString(getCustomTranslation("online-gauntlet-button").c_str());
             }
         }
 
@@ -378,3 +368,4 @@ class $modify(MyCreatorLayer, CreatorLayer) {
         LanguageManagerPopup::create()->show();
     }
 };
+
