@@ -341,17 +341,21 @@ class $modify(MyCreatorLayer, CreatorLayer) {
         );
         langButton->setID("mpo-languages-editor-button");
 
-        // 8. Insert our new button dynamically into the layout array
+        // 8. Insert our new button dynamically into the layout array safely
         if (versusBtn) {
-            // Find where the Versus button sits in the list
+            // Find where the Versus button sits in the list layout
             int versusIndex = menu->getChildren()->indexOfObject(versusBtn);
             
-            // Insert our language tile slot immediately right of the Versus button
-            menu->insertChild(langButton, versusIndex + 1);
+            // Add the child to the menu normally first
+            menu->addChild(langButton);
+            
+            // Reorder its position index to sit immediately right of the Versus button
+            menu->reorderChild(langButton, versusIndex + 1);
         } else {
             // Fallback: append normally if the Versus button is missing or locked
             menu->addChild(langButton);
         }
+
 
         // 9. Force the grid to recalculate its spacing metrics pixel-perfectly
         menu->updateLayout();
