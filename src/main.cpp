@@ -3,21 +3,14 @@
 #include <Geode/modify/CreatorLayer.hpp>
 #include <fstream>
 #include <vector>
-
 using namespace geode::prelude;
-
-// 1. DATA STRUCTURES
 struct LanguageMetadata {
     std::string filename;
     std::string englishName;
     std::string localName;
     std::string twoLetterId;
 };
-
-// Forward declaration of the helper function
 std::string getCustomTranslation(const std::string& key);
-
-// 2. DATA ENGINE UTILITIES
 namespace LanguageEngine {
     static std::vector<LanguageMetadata> getAllLanguages() {
         std::vector<LanguageMetadata> list;
@@ -32,8 +25,8 @@ namespace LanguageEngine {
                     auto data = matjson::parse(file);
                     LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
-                    meta.englishName = data["lang-name-en"].asString().unwrap_or("Unknown");
-                    meta.localName = data["lang-name-local"].asString().unwrap_or("Unknown");
+                    meta.englishName = data["lang-name-en"].asString().value_or("Unknown");
+                    meta.localName = data["lang-name-local"].asString().value_or("Unknown");
                     meta.twoLetterId = entry.path().stem().string();
                     list.push_back(meta);
                 } catch(...) {}
@@ -41,7 +34,6 @@ namespace LanguageEngine {
         }
         return list;
     }
-
     static void createNewLanguageFile(const std::string& enName, const std::string& locName, const std::string& id) {
         auto configDir = Mod::get()->getConfigDir();
         auto jsonPath = configDir / (id + ".json");
@@ -57,17 +49,11 @@ namespace LanguageEngine {
         file << defaultData.dump(matjson::TAB_INDENTATION);
     }
 }
-
-// ==========================================
-// 3. CLASS DECLARATIONS (HEADERS)
-// ==========================================
-
 class TranslationEditorPopup : public FLAlertLayer, public TextInputDelegate {
 protected:
     LanguageMetadata m_meta;
     std::string m_currentKey = "online-daily-level-button";
     CCTextInputNode* m_inputField = nullptr;
-
     bool init(LanguageMetadata meta) {
         if (!FLAlertLayer::init(nullptr, meta.englishName.c_str(), "", "Save & Close", nullptr, 360.f, false, 240.f, 1.f)) return false;
         m_meta = meta;
@@ -101,13 +87,11 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
-
 class LanguageManagerPopup : public FLAlertLayer {
 protected:
     CCMenu* m_listMenu = nullptr;
     std::vector<LanguageMetadata> m_cachedLanguages;
     int m_selectedIndex = -1;
-
     bool init() {
         if (!FLAlertLayer::init(nullptr, "Language Manager", "", "Close", nullptr, 400.f, false, 280.f, 1.f)) return false;
         auto layer = CCLayer::create();
@@ -137,14 +121,12 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
-
 class NewLanguagePopup : public FLAlertLayer, public TextInputDelegate {
 protected:
     CCTextInputNode* m_enInput;
     CCTextInputNode* m_locInput;
     CCTextInputNode* m_idInput;
     LanguageManagerPopup* m_parent;
-
     bool init(LanguageManagerPopup* parent) {
         if (!FLAlertLayer::init(nullptr, "Create Language", "", "Cancel", nullptr, 320.f, false, 260.f, 1.f)) return false;
         m_parent = parent;
@@ -174,11 +156,6 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
-
-// ==========================================
-// 4. FUNCTION IMPLEMENTATIONS (DECOUPLED LOOP)
-// ==========================================
-
 void TranslationEditorPopup::onNextKey(CCObject*) {
     if (m_inputField) {
         auto text = m_inputField->getString();
@@ -196,7 +173,6 @@ void TranslationEditorPopup::onNextKey(CCObject*) {
         }
     }
 }
-
 void LanguageManagerPopup::refreshList() {
     m_listMenu->removeAllChildren();
     m_cachedLanguages = LanguageEngine::getAllLanguages();
@@ -210,16 +186,13 @@ void LanguageManagerPopup::refreshList() {
         yOffset -= 40.0f;
     }
 }
-
 void LanguageManagerPopup::onSelectRow(CCObject* sender) {
     m_selectedIndex = sender->getTag();
     FLAlertLayer::create("Selected", ("Selected Profile: " + m_cachedLanguages[m_selectedIndex].englishName).c_str(), "OK")->show();
 }
-
 void LanguageManagerPopup::onNewLanguageClick(CCObject*) {
     NewLanguagePopup::create(this)->show();
 }
-
 void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     if (m_selectedIndex == -1) {
         FLAlertLayer::create("Selection Required", "Please click an item from the list layout first!", "OK")->show();
@@ -227,7 +200,6 @@ void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     }
     TranslationEditorPopup::create(m_cachedLanguages[m_selectedIndex])->show();
 }
-
 void NewLanguagePopup::onConfirm(CCObject*) {
     std::string en = m_enInput->getString();
     std::string loc = m_locInput->getString();
@@ -239,8 +211,12 @@ void NewLanguagePopup::onConfirm(CCObject*) {
     LanguageEngine::createNewLanguageFile(en, loc, id);
     this->onClose(nullptr);
     LanguageMetadata newMeta = { id + ".json", en, loc, id };
-TranslationEditorPopup::create(newMeta)->show();}// ==========================================
-// 5. GLOBAL FILE TRANSLATION ENGINE UTILITY
-// ==========================================
-
-std::string getCustomTranslation(const std::string& key) {ghc::filesystem::path configDir = Mod::get()->getConfigDir();ghc::filesystem::path jsonPath = configDir / "en.json";try {std::ifstream file(jsonPath);matjson::Value data = matjson::parse(file);if (data.contains("keys") && data["keys"].contains(key)) {return data["keys"][key].asString().unwrap_or("String Error");}} catch (...) {}return key;}// ==========================================// 6. GAME INJECTION HOOK (CREATOR LAYER)// ==========================================class $modify(MyCreatorLayer, CreatorLayer) {bool init() {if (!CreatorLayer::init()) return false;auto menu = this->getChildByID("creator-buttons-menu");if (!menu) return true;auto versusBtn = menu->getChildByID("versus-button");auto buttonContainer = cocos2d::CCNode::create();buttonContainer->setContentSize({ 50.f, 60.f });buttonContainer->setAnchorPoint({ 0.5f, 0.5f });auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");if (!iconSprite) {iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");}iconSprite->setScale(0.0878925f);iconSprite->setPosition({ 25.f, 35.f });buttonContainer->addChild(iconSprite);auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "goldFont.fnt");textLabel->setPosition({ 25.f, 5.f });textLabel->setScale(0.42f);buttonContainer->addChild(textLabel);auto langButton = CCMenuItemSpriteExtra::create(buttonContainer, this, menu_selector(MyCreatorLayer::onLanguageMenuClick));langButton->setID("mpo-languages-editor-button");if (versusBtn) {int versusIndex = menu->getChildren()->indexOfObject(versusBtn);menu->addChild(langButton);menu->reorderChild(langButton, versusIndex + 1);} else {menu->addChild(langButton);}menu->updateLayout();if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-daily-level-button").c_str());}}if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-gauntlet-button").c_str());}}return true;}void onLanguageMenuClick(cocos2d::CCObject* sender) {LanguageManagerPopup::create()->show();}};
+    TranslationEditorPopup::create(newMeta)->show();
+}
+std::string getCustomTranslation(const std::string& key) {
+    ghc::filesystem::path configDir = Mod::get()->getConfigDir();
+    ghc::filesystem::path jsonPath = configDir / "en.json";
+    try {
+        for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
+            if (entry.path().extension() == ".json") {
+jsonPath = entry.path();break;}}if (!ghc::filesystem::exists(jsonPath)) {return key;}std::ifstream file(jsonPath);matjson::Value data = matjson::parse(file);if (data.contains("keys") && data["keys"].contains(key)) {return data["keys"][key].asString().value_or("String Error");}} catch (...) {}return key;}class $modify(MyCreatorLayer, CreatorLayer) {bool init() {if (!CreatorLayer::init()) return false;auto menu = this->getChildByID("creator-buttons-menu");if (!menu) return true;auto versusBtn = menu->getChildByID("versus-button");auto buttonContainer = cocos2d::CCNode::create();buttonContainer->setContentSize({ 50.f, 60.f });buttonContainer->setAnchorPoint({ 0.5f, 0.5f });auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");if (!iconSprite) {iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");}iconSprite->setScale(0.0878925f);iconSprite->setPosition({ 25.f, 35.f });buttonContainer->addChild(iconSprite);auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "goldFont.fnt");textLabel->setPosition({ 25.f, 5.f });textLabel->setScale(0.42f);buttonContainer->addChild(textLabel);auto langButton = CCMenuItemSpriteExtra::create(buttonContainer, this, menu_selector(MyCreatorLayer::onLanguageMenuClick));langButton->setID("mpo-languages-editor-button");if (versusBtn) {int versusIndex = menu->getChildren()->indexOfObject(versusBtn);menu->addChild(langButton);menu->reorderChild(langButton, versusIndex + 1);} else {menu->addChild(langButton);}menu->updateLayout();if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-daily-level-button").c_str());}}if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-gauntlet-button").c_str());}}return true;}void onLanguageMenuClick(cocos2d::CCObject* sender) {LanguageManagerPopup::create()->show();}};
