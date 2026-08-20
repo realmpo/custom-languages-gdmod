@@ -232,7 +232,14 @@ std::string getCustomTranslation(const std::string& key) {
             return key;
         }
         std::ifstream file(jsonPath);
-        GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
+        
+        // FIXED: Using standard parse and safe unwrap validation to prevent macro return type clashes
+        auto parseResult = matjson::parse(file);
+        if (!parseResult.isOk()) {
+            return key;
+        }
+        auto data = parseResult.unwrap();
+
         if (data.contains("keys") && data["keys"].contains(key)) {
             auto val = data["keys"][key];
             if (val.isString()) {
