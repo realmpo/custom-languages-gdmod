@@ -20,15 +20,21 @@ namespace LanguageEngine {
         }
         for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
             if (entry.path().extension() == ".json") {
-                try {
-                    std::ifstream file(entry.path());
-                    auto data = matjson::parse(file);
+              try {
+                std::ifstream file(entry.path());
+                    
+                // Natively unwraps the matjson result wrapper directly into 'data'!
+                  GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
+                    
                     LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
+                    
                     auto engVal = data["lang-name-en"];
                     meta.englishName = engVal.isString() ? engVal.asString().value() : "Unknown";
+                    
                     auto locVal = data["lang-name-local"];
                     meta.localName = locVal.isString() ? locVal.asString().value() : "Unknown";
+                    
                     meta.twoLetterId = entry.path().stem().string();
                     list.push_back(meta);
                 } catch(...) {}
@@ -217,27 +223,36 @@ void NewLanguagePopup::onConfirm(CCObject*) {
     LanguageMetadata newMeta = { id + ".json", en, loc, id };
     TranslationEditorPopup::create(newMeta)->show();
 }
-std::string getCustomTranslation(const std::string& key){
-	ghc::filesystem::path configDir = Mod::get()->getConfigDir();ghc::filesystem::path jsonPath = configDir / "en.json";
-	try {
-		for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
-			if (entry.path().extension() == ".json") {
-				jsonPath = entry.path();
-				break;
-			}
-		}
-		if (!ghc::filesystem::exists(jsonPath)) {
-			return key;
-		}std::ifstream file(jsonPath);
-		matjson::Value data = matjson::parse(file);
-		if (data.contains("keys") && data["keys"].contains(key)) {
-			auto val = data["keys"][key];
-			if (val.isString()) {
-				return val.asString().value();
-			}
-		}
-	} catch (...) {return key;}
+std::string getCustomTranslation(const std::string& key) {
+    ghc::filesystem::path configDir = Mod::get()->getConfigDir();
+    ghc::filesystem::path jsonPath = configDir / "en.json";
+    try {
+        for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
+            if (entry.path().extension() == ".json") {
+                jsonPath = entry.path();
+                break;
+            }
+        }
+        if (!ghc::filesystem::exists(jsonPath)) {
+            return key;
+        }
+        std::ifstream file(jsonPath);
+        
+        // Clean macro unwrapping block
+        GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
+        
+        if (data.contains("keys") && data["keys"].contains(key)) {
+            auto val = data["keys"][key];
+            if (val.isString()) {
+                return val.asString().value();
+            }
+        }
+    } catch (...) {
+        return key;
+    }
+    return key;
 }
+
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
         if (!CreatorLayer::init()) return false;
