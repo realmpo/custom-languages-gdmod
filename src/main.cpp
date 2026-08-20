@@ -3,6 +3,7 @@
 #include <Geode/modify/CreatorLayer.hpp>
 #include <fstream>
 #include <vector>
+#include <filesystem>
 using namespace geode::prelude;
 struct LanguageMetadata {
     std::string filename;
@@ -15,26 +16,20 @@ namespace LanguageEngine {
     static std::vector<LanguageMetadata> getAllLanguages() {
         std::vector<LanguageMetadata> list;
         auto configDir = Mod::get()->getConfigDir();
-        if (!ghc::filesystem::exists(configDir)) {
-            ghc::filesystem::create_directories(configDir);
+        if (!std::filesystem::exists(configDir)) {
+            std::filesystem::create_directories(configDir);
         }
-        for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
+        for (auto& entry : std::filesystem::directory_iterator(configDir)) {
             if (entry.path().extension() == ".json") {
-              try {
-                std::ifstream file(entry.path());
-                    
-                // Natively unwraps the matjson result wrapper directly into 'data'!
-                  GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
-                    
+                try {
+                    std::ifstream file(entry.path());
+                    GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
                     LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
-                    
                     auto engVal = data["lang-name-en"];
                     meta.englishName = engVal.isString() ? engVal.asString().value() : "Unknown";
-                    
                     auto locVal = data["lang-name-local"];
                     meta.localName = locVal.isString() ? locVal.asString().value() : "Unknown";
-                    
                     meta.twoLetterId = entry.path().stem().string();
                     list.push_back(meta);
                 } catch(...) {}
@@ -67,7 +62,7 @@ protected:
         m_meta = meta;
         auto layer = CCLayer::create();
         this->addChild(layer);
-        auto keyLabel = CCLabelBMFont::create(("Editing Key: " + m_currentKey).c_str(), "goldFont.fnt");
+        auto keyLabel = CCLabelBMFont::create(("Editing Key: " + m_currentKey).c_str(), "bigFont.fnt");
         keyLabel->setPosition({285, 220});
         keyLabel->setScale(0.5f);
         layer->addChild(keyLabel);
@@ -83,7 +78,7 @@ protected:
         auto menu = CCMenu::create();
         menu->setPosition({285, 100});
         layer->addChild(menu);
-        auto testBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Next Key", "goldFont.fnt", "GJ_button_01.png"), this, menu_selector(TranslationEditorPopup::onNextKey));
+        auto testBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Next Key", "bigFont.fnt", "GJ_button_01.png"), this, menu_selector(TranslationEditorPopup::onNextKey));
         menu->addChild(testBtn);
         return true;
     }
@@ -110,9 +105,9 @@ protected:
         auto sideMenu = CCMenu::create();
         sideMenu->setPosition({420, 140});
         layer->addChild(sideMenu);
-        auto newBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("New", "goldFont.fnt", "GJ_button_05.png"), this, menu_selector(LanguageManagerPopup::onNewLanguageClick));
+        auto newBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("New", "bigFont.fnt", "GJ_button_05.png"), this, menu_selector(LanguageManagerPopup::onNewLanguageClick));
         sideMenu->addChild(newBtn);
-        auto editBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Edit Text", "goldFont.fnt", "GJ_button_01.png"), this, menu_selector(LanguageManagerPopup::onEditTranslationClick));
+        auto editBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Edit Text", "bigFont.fnt", "GJ_button_01.png"), this, menu_selector(LanguageManagerPopup::onEditTranslationClick));
         editBtn->setPosition({0, -50});
         sideMenu->addChild(editBtn);
         refreshList();
@@ -152,7 +147,7 @@ protected:
         auto menu = CCMenu::create();
         menu->setPosition({285, 80});
         layer->addChild(menu);
-        auto confirmBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Confirm", "goldFont.fnt", "GJ_button_01.png"), this, menu_selector(NewLanguagePopup::onConfirm));
+        auto confirmBtn = CCMenuItemSpriteExtra::create(ButtonSprite::create("Confirm", "bigFont.fnt", "GJ_button_01.png"), this, menu_selector(NewLanguagePopup::onConfirm));
         menu->addChild(confirmBtn);
         return true;
     }
@@ -166,14 +161,13 @@ public:
 };
 void TranslationEditorPopup::onNextKey(CCObject*) {
     if (m_inputField) {
-        // FIXED: Explicitly convert the text field input to a primitive string to satisfy matjson
         std::string text = m_inputField->getString();
         if (!text.empty()) {
             auto configDir = Mod::get()->getConfigDir();
             auto path = configDir / m_meta.filename;
             try {
                 std::ifstream readFile(path);
-                auto data = matjson::parse(readFile);
+                GEODE_UNWRAP_INTO(auto data, matjson::parse(readFile));
                 data["keys"][m_currentKey] = text;
                 std::ofstream writeFile(path);
                 writeFile << data.dump(matjson::TAB_INDENTATION);
@@ -210,7 +204,6 @@ void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     TranslationEditorPopup::create(m_cachedLanguages[m_selectedIndex])->show();
 }
 void NewLanguagePopup::onConfirm(CCObject*) {
-    // FIXED: Unpacked directly to standard primitives to clear template constraints completely
     std::string en = m_enInput->getString();
     std::string loc = m_locInput->getString();
     std::string id = m_idInput->getString();
@@ -219,28 +212,25 @@ void NewLanguagePopup::onConfirm(CCObject*) {
         return;
     }
     LanguageEngine::createNewLanguageFile(en, loc, id);
-    this->onClose(nullptr);
+    this->keyBackClicked();
     LanguageMetadata newMeta = { id + ".json", en, loc, id };
     TranslationEditorPopup::create(newMeta)->show();
 }
 std::string getCustomTranslation(const std::string& key) {
-    ghc::filesystem::path configDir = Mod::get()->getConfigDir();
-    ghc::filesystem::path jsonPath = configDir / "en.json";
+    auto configDir = Mod::get()->getConfigDir();
+    auto jsonPath = configDir / "en.json";
     try {
-        for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
+        for (auto& entry : std::filesystem::directory_iterator(configDir)) {
             if (entry.path().extension() == ".json") {
                 jsonPath = entry.path();
                 break;
             }
         }
-        if (!ghc::filesystem::exists(jsonPath)) {
+        if (!std::filesystem::exists(jsonPath)) {
             return key;
         }
         std::ifstream file(jsonPath);
-        
-        // Clean macro unwrapping block
         GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
-        
         if (data.contains("keys") && data["keys"].contains(key)) {
             auto val = data["keys"][key];
             if (val.isString()) {
@@ -252,7 +242,6 @@ std::string getCustomTranslation(const std::string& key) {
     }
     return key;
 }
-
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
         if (!CreatorLayer::init()) return false;
