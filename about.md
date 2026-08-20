@@ -8,3 +8,6 @@ But, did you ever want your language to ***be on Geometry Dash***? That's what t
 
 If you are at the main menu, click the *online button*. (the button on the right with a hammer and wrench) Click the new **Languages** button. The **Custom Languages Menu** will open.
 
+### Creating Languages
+
+To create a language, click the New button at the right.

@@ -26,11 +26,10 @@ namespace LanguageEngine {
                     LanguageMetadata meta;
                     meta.filename = entry.path().filename().string();
                     auto engVal = data["lang-name-en"];
-                    meta.englishName = engVal.isString() ? engVal.asString().unwrap() : "Unknown";
+                    meta.englishName = engVal.isString() ? engVal.asString().value() : "Unknown";
                     auto locVal = data["lang-name-local"];
-                    meta.localName = locVal.isString() ? locVal.asString().unwrap() : "Unknown";
+                    meta.localName = locVal.isString() ? locVal.asString().value() : "Unknown";
                     meta.twoLetterId = entry.path().stem().string();
-
                     list.push_back(meta);
                 } catch(...) {}
             }
@@ -161,7 +160,8 @@ public:
 };
 void TranslationEditorPopup::onNextKey(CCObject*) {
     if (m_inputField) {
-        auto text = m_inputField->getString();
+        // FIXED: Explicitly convert the text field input to a primitive string to satisfy matjson
+        std::string text = m_inputField->getString();
         if (!text.empty()) {
             auto configDir = Mod::get()->getConfigDir();
             auto path = configDir / m_meta.filename;
@@ -204,6 +204,7 @@ void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     TranslationEditorPopup::create(m_cachedLanguages[m_selectedIndex])->show();
 }
 void NewLanguagePopup::onConfirm(CCObject*) {
+    // FIXED: Unpacked directly to standard primitives to clear template constraints completely
     std::string en = m_enInput->getString();
     std::string loc = m_locInput->getString();
     std::string id = m_idInput->getString();
@@ -216,27 +217,70 @@ void NewLanguagePopup::onConfirm(CCObject*) {
     LanguageMetadata newMeta = { id + ".json", en, loc, id };
     TranslationEditorPopup::create(newMeta)->show();
 }
-std::string getCustomTranslation(const std::string& key) {
-    ghc::filesystem::path configDir = Mod::get()->getConfigDir();
-    ghc::filesystem::path jsonPath = configDir / "en.json";
-    try {
-        for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
-            if (entry.path().extension() == ".json") {
-                jsonPath = entry.path();
-                break;
-            }
-        }
-        if (!ghc::filesystem::exists(jsonPath)) {
-            return key;
-        }
-        std::ifstream file(jsonPath);
-        matjson::Value data = matjson::parse(file);
-                if (data.contains("keys") && data["keys"].contains(key)) {
-            auto val = data["keys"][key];
-            if (val.isString()) {
-                return val.asString().unwrap();
-            }
-        }
-    } catch (...) {}
-    return key;
+std::string getCustomTranslation(const std::string& key){
+	ghc::filesystem::path configDir = Mod::get()->getConfigDir();ghc::filesystem::path jsonPath = configDir / "en.json";
+	try {
+		for (auto& entry : ghc::filesystem::directory_iterator(configDir)) {
+			if (entry.path().extension() == ".json") {
+				jsonPath = entry.path();
+				break;
+			}
+		}
+		if (!ghc::filesystem::exists(jsonPath)) {
+			return key;
+		}std::ifstream file(jsonPath);
+		matjson::Value data = matjson::parse(file);
+		if (data.contains("keys") && data["keys"].contains(key)) {
+			auto val = data["keys"][key];
+			if (val.isString()) {
+				return val.asString().value();
+			}
+		}
+	} catch (...) {return key};
 }
+class $modify(MyCreatorLayer, CreatorLayer) {
+    bool init() {
+        if (!CreatorLayer::init()) return false;
+        auto menu = this->getChildByID("creator-buttons-menu");
+        if (!menu) return true;
+        auto versusBtn = menu->getChildByID("versus-button");
+        auto buttonContainer = cocos2d::CCNode::create();
+        buttonContainer->setContentSize({ 50.f, 60.f });
+        buttonContainer->setAnchorPoint({ 0.5f, 0.5f });
+        auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");
+        if (!iconSprite) {
+            iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
+        }
+        iconSprite->setScale(0.0878925f);
+        iconSprite->setPosition({ 25.f, 35.f });
+        buttonContainer->addChild(iconSprite);
+        auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "bigFont.fnt");
+        textLabel->setPosition({ 25.f, 5.f });
+        textLabel->setScale(0.42f);
+        buttonContainer->addChild(textLabel);
+        auto langButton = CCMenuItemSpriteExtra::create(buttonContainer, this, menu_selector(MyCreatorLayer::onLanguageMenuClick));
+        langButton->setID("mpo-languages-editor-button");
+        if (versusBtn) {
+            int versusIndex = menu->getChildren()->indexOfObject(versusBtn);
+            menu->addChild(langButton);
+            menu->reorderChild(langButton, versusIndex + 1);
+        } else {
+            menu->addChild(langButton);
+        }
+        menu->updateLayout();
+        if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {
+            if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {
+                label->setString(getCustomTranslation("online-daily-level-button").c_str());
+            }
+        }
+        if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {
+            if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {
+                label->setString(getCustomTranslation("online-gauntlet-button").c_str());
+            }
+        }
+        return true;
+    }
+    void onLanguageMenuClick(cocos2d::CCObject* sender) {
+        LanguageManagerPopup::create()->show();
+    }
+};
