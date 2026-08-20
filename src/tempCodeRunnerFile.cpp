@@ -1,6 +1,3 @@
-#include <Geode/Geode.hpp>
-#include <Geode/Bindings.hpp>
-#include <Geode/modify/CreatorLayer.hpp>
 #include <fstream>
 #include <vector>
 #include <filesystem>
