@@ -236,7 +236,7 @@ std::string getCustomTranslation(const std::string& key){
 				return val.asString().value();
 			}
 		}
-	} catch (...) {return key};
+	} catch (...) {return key;}
 }
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
