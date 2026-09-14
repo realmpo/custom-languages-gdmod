@@ -169,15 +169,21 @@ void TranslationEditorPopup::onNextKey(CCObject*) {
             auto path = configDir / m_meta.filename;
             try {
                 std::ifstream readFile(path);
-                GEODE_UNWRAP_INTO(auto data, matjson::parse(readFile));
-                data["keys"][m_currentKey] = text;
-                std::ofstream writeFile(path);
-                writeFile << data.dump(matjson::TAB_INDENTATION);
-                FLAlertLayer::create("Success", "Translation saved locally!", "OK")->show();
+                
+                // FIXED: Manual parsing layout check to prevent macro 'void' return clashes
+                auto parseResult = matjson::parse(readFile);
+                if (parseResult.isOk()) {
+                    auto data = parseResult.unwrap();
+                    data["keys"][m_currentKey] = text;
+                    std::ofstream writeFile(path);
+                    writeFile << data.dump(matjson::TAB_INDENTATION);
+                    FLAlertLayer::create("Success", "Translation saved locally!", "OK")->show();
+                }
             } catch(...) {}
         }
     }
 }
+
 void LanguageManagerPopup::refreshList() {
     m_listMenu->removeAllChildren();
     m_cachedLanguages = LanguageEngine::getAllLanguages();
