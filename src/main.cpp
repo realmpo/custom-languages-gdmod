@@ -4,14 +4,18 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
+
 using namespace geode::prelude;
+
 struct LanguageMetadata {
     std::string filename;
     std::string englishName;
     std::string localName;
     std::string twoLetterId;
 };
+
 std::string getCustomTranslation(const std::string& key);
+
 namespace LanguageEngine {
     static std::vector<LanguageMetadata> getAllLanguages() {
         std::vector<LanguageMetadata> list;
@@ -23,22 +27,24 @@ namespace LanguageEngine {
             if (entry.path().extension() == ".json") {
                 try {
                     std::ifstream file(entry.path());
-                    GEODE_UNWRAP_INTO(auto data, matjson::parse(file));
-                    LanguageMetadata meta;
-                    meta.filename = entry.path().filename().string();
-                    auto engVal = data["lang-name-en"];
-                    meta.englishName = engVal.isString() ? engVal.asString().unwrap() : "Unknown";
-                    
-                    auto locVal = data["lang-name-local"];
-                    meta.localName = locVal.isString() ? locVal.asString().unwrap() : "Unknown";
-
-                    meta.twoLetterId = entry.path().stem().string();
-                    list.push_back(meta);
+                    auto parseResult = matjson::parse(file);
+                    if (parseResult.isOk()) {
+                        auto data = parseResult.unwrap();
+                        LanguageMetadata meta;
+                        meta.filename = entry.path().filename().string();
+                        auto engVal = data["lang-name-en"];
+                        meta.englishName = engVal.isString() ? engVal.asString().unwrap() : "Unknown";
+                        auto locVal = data["lang-name-local"];
+                        meta.localName = locVal.isString() ? locVal.asString().unwrap() : "Unknown";
+                        meta.twoLetterId = entry.path().stem().string();
+                        list.push_back(meta);
+                    }
                 } catch(...) {}
             }
         }
         return list;
     }
+
     static void createNewLanguageFile(const std::string& enName, const std::string& locName, const std::string& id) {
         auto configDir = Mod::get()->getConfigDir();
         auto jsonPath = configDir / (id + ".json");
@@ -54,11 +60,13 @@ namespace LanguageEngine {
         file << defaultData.dump(matjson::TAB_INDENTATION);
     }
 }
+
 class TranslationEditorPopup : public FLAlertLayer, public TextInputDelegate {
 protected:
     LanguageMetadata m_meta;
     std::string m_currentKey = "online-daily-level-button";
     CCTextInputNode* m_inputField = nullptr;
+
     bool init(LanguageMetadata meta) {
         if (!FLAlertLayer::init(nullptr, meta.englishName.c_str(), "", "Save & Close", nullptr, 360.f, false, 240.f, 1.f)) return false;
         m_meta = meta;
@@ -92,11 +100,13 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
+
 class LanguageManagerPopup : public FLAlertLayer {
 protected:
     CCMenu* m_listMenu = nullptr;
     std::vector<LanguageMetadata> m_cachedLanguages;
     int m_selectedIndex = -1;
+
     bool init() {
         if (!FLAlertLayer::init(nullptr, "Language Manager", "", "Close", nullptr, 400.f, false, 280.f, 1.f)) return false;
         auto layer = CCLayer::create();
@@ -126,12 +136,14 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
+
 class NewLanguagePopup : public FLAlertLayer, public TextInputDelegate {
 protected:
     CCTextInputNode* m_enInput;
     CCTextInputNode* m_locInput;
     CCTextInputNode* m_idInput;
     LanguageManagerPopup* m_parent;
+
     bool init(LanguageManagerPopup* parent) {
         if (!FLAlertLayer::init(nullptr, "Create Language", "", "Cancel", nullptr, 320.f, false, 260.f, 1.f)) return false;
         m_parent = parent;
@@ -161,6 +173,7 @@ public:
         CC_SAFE_DELETE(ret); return nullptr;
     }
 };
+
 void TranslationEditorPopup::onNextKey(CCObject*) {
     if (m_inputField) {
         std::string text = m_inputField->getString();
@@ -169,8 +182,6 @@ void TranslationEditorPopup::onNextKey(CCObject*) {
             auto path = configDir / m_meta.filename;
             try {
                 std::ifstream readFile(path);
-                
-                // FIXED: Manual parsing layout check to prevent macro 'void' return clashes
                 auto parseResult = matjson::parse(readFile);
                 if (parseResult.isOk()) {
                     auto data = parseResult.unwrap();
@@ -197,13 +208,16 @@ void LanguageManagerPopup::refreshList() {
         yOffset -= 40.0f;
     }
 }
+
 void LanguageManagerPopup::onSelectRow(CCObject* sender) {
     m_selectedIndex = sender->getTag();
     FLAlertLayer::create("Selected", ("Selected Profile: " + m_cachedLanguages[m_selectedIndex].englishName).c_str(), "OK")->show();
 }
+
 void LanguageManagerPopup::onNewLanguageClick(CCObject*) {
     NewLanguagePopup::create(this)->show();
 }
+
 void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     if (m_selectedIndex == -1) {
         FLAlertLayer::create("Selection Required", "Please click an item from the list layout first!", "OK")->show();
@@ -211,6 +225,7 @@ void LanguageManagerPopup::onEditTranslationClick(CCObject*) {
     }
     TranslationEditorPopup::create(m_cachedLanguages[m_selectedIndex])->show();
 }
+
 void NewLanguagePopup::onConfirm(CCObject*) {
     std::string en = m_enInput->getString();
     std::string loc = m_locInput->getString();
@@ -220,87 +235,41 @@ void NewLanguagePopup::onConfirm(CCObject*) {
         return;
     }
     LanguageEngine::createNewLanguageFile(en, loc, id);
-    this->keyBackClicked();
-    LanguageMetadata newMeta = { id + ".json", en, loc, id };
-    TranslationEditorPopup::create(newMeta)->show();
+this->keyBackClicked();
+LanguageMetadata newMeta = { id + ".json", en, loc, id };
+TranslationEditorPopup::create(newMeta)->show();
 }
-std::string getCustomTranslation(const std::string& key) {
-    auto configDir = Mod::get()->getConfigDir();
+std::string getCustomTranslation(const std::string& key) {auto configDir = Mod::get()->getConfigDir();
     auto jsonPath = configDir / "en.json";
-    try {
-        for (auto& entry : std::filesystem::directory_iterator(configDir)) {
-            if (entry.path().extension() == ".json") {
-                jsonPath = entry.path();
-                break;
-            }
-        }
-        if (!std::filesystem::exists(jsonPath)) {
-            return key;
-        }
-        std::ifstream file(jsonPath);
-        
-        // FIXED: Using standard parse and safe unwrap validation to prevent macro return type clashes
-        auto parseResult = matjson::parse(file);
-        if (!parseResult.isOk()) {
-            return key;
-        }
-        auto data = parseResult.unwrap();
-
-        if (data.contains("keys") && data["keys"].contains(key)) {
-            auto val = data["keys"][key];
-            if (val.isString()) {
-                return val.asString().unwrap();
-            }
-        }
-    } catch (...) {
-        return key;
+    try {for (auto& entry : std::filesystem::directory_iterator(configDir)) {if (entry.path().extension() == ".json")
+    {
+        jsonPath = entry.path();
+        break;
     }
-    return key;
 }
-
-class $modify(MyCreatorLayer, CreatorLayer) {
-    bool init() {
-        if (!CreatorLayer::init()) return false;
+if (!std::filesystem::exists(jsonPath))
+{
+    return key;
+}std::ifstream file(jsonPath);
+auto parseResult = matjson::parse(file);
+if (parseResult.isOk()) {auto data = parseResult.unwrap();
+    if (data.contains("keys") && data["keys"].contains(key)) {auto val = data["keys"][key];
+        if (val.isString()) {return val.asString().unwrap();
+        }}}} catch (...) {return key;}return key;
+    }class $modify(MyCreatorLayer, CreatorLayer)
+    {
+        bool init() {if (!CreatorLayer::init()) return false;
         auto menu = this->getChildByID("creator-buttons-menu");
-        if (!menu) return true;
-        auto versusBtn = menu->getChildByID("versus-button");
+        if (!menu) return true;auto versusBtn = menu->getChildByID("versus-button");
         auto buttonContainer = cocos2d::CCNode::create();
         buttonContainer->setContentSize({ 50.f, 60.f });
         buttonContainer->setAnchorPoint({ 0.5f, 0.5f });
         auto iconSprite = cocos2d::CCSprite::create("logo-transparent.png");
-        if (!iconSprite) {
-            iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
-        }
-        iconSprite->setScale(0.0878925f);
-        iconSprite->setPosition({ 25.f, 35.f });
-        buttonContainer->addChild(iconSprite);
-        auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "bigFont.fnt");
-        textLabel->setPosition({ 25.f, 5.f });
-        textLabel->setScale(0.42f);
+        if (!iconSprite) {iconSprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
+        }iconSprite->setScale(0.0878925f);iconSprite->setPosition({ 25.f, 35.f });
+        buttonContainer->addChild(iconSprite);auto textLabel = cocos2d::CCLabelBMFont::create("Languages", "bigFont.fnt");
+        textLabel->setPosition({ 25.f, 5.f });textLabel->setScale(0.42f);
         buttonContainer->addChild(textLabel);
         auto langButton = CCMenuItemSpriteExtra::create(buttonContainer, this, menu_selector(MyCreatorLayer::onLanguageMenuClick));
-        langButton->setID("mpo-languages-editor-button");
-        if (versusBtn) {
-            int versusIndex = menu->getChildren()->indexOfObject(versusBtn);
-            menu->addChild(langButton);
-            menu->reorderChild(langButton, versusIndex + 1);
-        } else {
-            menu->addChild(langButton);
-        }
-        menu->updateLayout();
-        if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {
-            if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {
-                label->setString(getCustomTranslation("online-daily-level-button").c_str());
-            }
-        }
-        if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {
-            if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {
-                label->setString(getCustomTranslation("online-gauntlet-button").c_str());
-            }
-        }
-        return true;
-    }
-    void onLanguageMenuClick(cocos2d::CCObject* sender) {
-        LanguageManagerPopup::create()->show();
-    }
-};
+        langButton->setID("mpo-languages-editor-button");if (versusBtn) {int versusIndex = menu->getChildren()->indexOfObject(versusBtn);menu->addChild(langButton);menu->reorderChild(langButton, versusIndex + 1);} else {menu->addChild(langButton);}menu->updateLayout();if (auto dailyBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("daily-level-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(dailyBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-daily-level-button").c_str());}}if (auto gauntletBtn = typeinfo_cast<CCMenuItemSpriteExtra*>(menu->getChildByID("gauntlet-button"))) {if (auto label = typeinfo_cast<CCLabelBMFont*>(gauntletBtn->getChildByIDRecursive("label"))) {label->setString(getCustomTranslation("online-gauntlet-button").c_str());}}return true;}void onLanguageMenuClick(cocos2d::CCObject* sender) {LanguageManagerPopup::create()->show();
+}};
