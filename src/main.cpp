@@ -251,6 +251,7 @@ std::string getCustomTranslation(const std::string& key) {
     }
     return key;
 }
+
 class $modify(MyCreatorLayer, CreatorLayer) {
     bool init() {
         if (!CreatorLayer::init()) return false;
